@@ -96,6 +96,7 @@ schema = Schema(
         Optional("manage_dhcp"): bool,
         Optional("manage_dhcp_v4"): bool,
         Optional("manage_dhcp_v6"): bool,
+        Optional("isc_dhcp_server"): str,
         Optional("manage_dns"): bool,
         Optional("manage_forward_zones"): [str],
         Optional("manage_reverse_zones"): [str],

@@ -1,0 +1,150 @@
+// ******************************************************************
+// Cobbler managed kea-dhcp6.conf file
+// generated from cobbler kea-dhcp6.conf template ($date)
+// Do NOT make changes to /etc/kea/kea-dhcp6.conf. Instead, make your changes
+// in /etc/cobbler/kea-dhcp6.template, as /etc/kea/kea-dhcp6.conf will be
+// overwritten.
+// ******************************************************************
+{
+    "dhcp6": {
+        "valid-lifetime": 4000,
+        "renew-timer": 1000,
+        "rebind-timer": 2000,
+        "interfaces-config": {
+            // interface name (e.g. "eth0" or specific IPv4 address on that
+            // interface name (e.g. "eth0/2001:db8:0:1:abcd").
+            "interfaces": [ "*" ]
+        },
+        "lease-database": {
+            "type": "memfile",
+            "persist": true,
+            "name": "/var/lib/kea/dhcp6.leases"
+        },
+        "subnet4": [
+            {
+                "id": 1,
+                "subnet": "2001:db8:0:1::0/64",
+                "interfaces": [ "*" ],
+                "option-data": [
+                    {
+                        "name": "dns-servers",
+                        "data": "2001:db8:0:1::1"
+                    },
+                    {
+                        "name": "domain-search",
+                        "data": "domain.example"
+                    }
+                ],
+                "pools": [
+                    {
+                        "pool": "2001:db8:0:1::100 - 192.168.1.254"
+                    }
+                ],
+                "valid-lifetime": 21600,
+                "max-valid-lifetime": 43200,
+                "next-server": "$next_server_v4"
+            }
+        ],
+        // Default bootfile-url
+        "bootfile-url": "tftp://[$next_server_v6]/grub/grub.0",
+
+        "client-classes": [
+            {
+                "name": "Legacy",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00000'",
+                "bootfile-url": "tftp://[$next_server_v6]/grub/grub.0"
+            },
+            {
+                "name": "UEFI-32-1",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00006'",
+                "bootfile-url": "tftp://[$next_server_v6]/unsupported"
+            },
+            {
+                "name": "UEFI-32-2",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00002'",
+                "bootfile-url": "tftp://[$next_server_v6]/unsupported"
+            },
+            {
+                "name": "UEFI-64-1",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00007'",
+                "bootfile-url": "tftp://[$next_server_v6]/grub/grubx64.efi"
+            },
+            {
+                "name": "UEFI-64-2",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00008'",
+                "bootfile-url": "tftp://[$next_server_v6]/grub/grubx64.efi"
+            },
+            {
+                "name": "UEFI-64-3",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00009'",
+                "bootfile-url": "tftp://[$next_server_v6]/grub/grubx64.efi"
+            },
+            {
+                "name": "armv7",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:0000a'",
+                "bootfile-url": "tftp://[$next_server_v6]/grub/armv7.efi"
+            },
+            {
+                "name": "aarch64",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:0000b'",
+                "bootfile-url": "tftp://[$next_server_v6]/grub/grubaa64.efi"
+            },
+            {
+                "name": "RiskV32-1",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00025'",
+                "bootfile-url": "tftp://[$next_server_v6]/unsupported"
+            },
+            {
+                "name": "RiskV32-2",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00027'",
+                "bootfile-url": "tftp://[$next_server_v6]/unsupported"
+            },
+            {
+                "name": "PPC64le",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:0000e'",
+                "bootfile-url": "tftp://[$next_server_v6]/grub/grub.ppc64le"
+            }
+        ],
+        "host-reservation-identifiers": [
+            "hw-address"
+        ],
+        // TODO check
+        "reservation-mode": "global",
+        "reservations": [
+            #for dhcp_tag in $dhcp_tags.keys():
+            #for mac in $dhcp_tags[$dhcp_tag].keys():
+            #set iface = $dhcp_tags[$dhcp_tag][$mac]
+            {
+                // $iface.name
+                "hw-address": "$mac",
+                #if $iface.dns_name:
+                "hostname": "$iface.dns_name"
+                #else if $iface.hostname:
+                "hostname": "$iface.hostname"
+                #end if
+                #if $iface.ip_address:
+                "ip-address": "iface.ip_address",
+                #end if
+                    "option-data": [
+                    #if $iface.name_servers:
+                    #set $mynameservers = ', '.join($iface.name_servers)
+                    {
+                        "name": "dns-servers",
+                        "data": "$mynameservers"
+                    },
+                    #end if
+                    #set host_filename = $iface.get("filename", None)
+                    #set host_next_server_v6 = $iface.get("next_server_v6", $next_server_v6)
+                    #if $host_next_server_v6 != $next_server_v6 or $host_filename:
+                    {
+                        "name": "bootfile-url",
+                        "data": "tftp://[$host_next_server_v6]/$host_filename",
+                    },
+                    #end if
+                ],
+            },
+            #end for
+            #end for
+        ]
+    }
+}

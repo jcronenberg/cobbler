@@ -44,25 +44,28 @@ class _IscManager(DhcpManagerModule):
     def __init__(self, api: "CobblerAPI"):
         super().__init__(api)
 
-        self.settings_file_v4 = utils.dhcpconf_location(enums.DHCP.V4)
-        self.settings_file_v6 = utils.dhcpconf_location(enums.DHCP.V6)
+        self.settings_file_v4 = utils.isc_dhcpconf_location(enums.DHCP.V4)
+        self.settings_file_v6 = utils.isc_dhcpconf_location(enums.DHCP.V6)
+        if self.settings.isc_dhcp_server == "dhcpd":
+            self.template_file_v4 = "/etc/cobbler/dhcp.template"
+            self.template_file_v6 = "/etc/cobbler/dhcp6.template"
+        else:
+            self.template_file_v4 = "/etc/cobbler/kea-dhcp4.template"
+            self.template_file_v6 = "/etc/cobbler/kea-dhcp6.template"
 
     def sync_dhcp(self) -> None:
         self.write_configs()
         self.restart_service()
 
-    def write_v4_config(
-        self, template_file: str = "/etc/cobbler/dhcp.template"
-    ) -> None:
+    def write_v4_config(self) -> None:
         """
         DHCPv4 files are written when ``manage_dhcp_v4`` is set in our settings.
-
-        :param template_file: The location of the DHCP template.
         """
 
         blender_cache: Dict[str, Any] = {}
 
-        with open(template_file, "r", encoding="UTF-8") as template_fd:
+        self.logger.info(self.template_file_v4)
+        with open(self.template_file_v4, "r", encoding="UTF-8") as template_fd:
             template_data = template_fd.read()
 
         # Use a simple counter for generating generic names where a hostname is not available.
@@ -236,18 +239,14 @@ class _IscManager(DhcpManagerModule):
         self.logger.info("generating %s", self.settings_file_v4)
         self.templar.render(template_data, metadata, self.settings_file_v4)
 
-    def write_v6_config(
-        self, template_file: str = "/etc/cobbler/dhcp6.template"
-    ) -> None:
+    def write_v6_config(self) -> None:
         """
         DHCPv6 files are written when ``manage_dhcp_v6`` is set in our settings.
-
-        :param template_file: The location of the DHCP template.
         """
 
         blender_cache: Dict[str, Any] = {}
 
-        with open(template_file, "r", encoding="UTF-8") as template_fd:
+        with open(self.template_file_v6, "r", encoding="UTF-8") as template_fd:
             template_data = template_fd.read()
 
         # Use a simple counter for generating generic names where a hostname is not available.
@@ -411,15 +410,16 @@ class _IscManager(DhcpManagerModule):
 
         :param service_name: The name of the DHCP service.
         """
-        dhcpd_path = shutil.which(service_name)
-        if dhcpd_path is None:
-            self.logger.error("%s path could not be found", service_name)
-            return -1
-        return_code_service_restart = utils.subprocess_call(
-            [dhcpd_path, "-t", "-q"], shell=False
-        )
-        if return_code_service_restart != 0:
-            self.logger.error("Testing config - %s -t failed", service_name)
+        if self.settings.isc_dhcp_server == "dhcpd":
+            dhcpd_path = shutil.which(service_name)
+            if dhcpd_path is None:
+                self.logger.error("%s path could not be found", service_name)
+                return -1
+            return_code_service_restart = utils.subprocess_call(
+                [dhcpd_path, "-t", "-q"], shell=False
+            )
+            if return_code_service_restart != 0:
+                self.logger.error("Testing config - %s -t failed", service_name)
         return_code_service_restart = process_management.service_restart(service_name)
         if return_code_service_restart != 0:
             self.logger.error("%s service failed", service_name)
@@ -435,14 +435,13 @@ class _IscManager(DhcpManagerModule):
         if not self.settings.restart_dhcp:
             return 0
 
+        services = utils.isc_dhcp_service_name()
         # Even if one fails, try both and return an error
         ret = 0
-        if self.settings.manage_dhcp_v4:
-            service_v4 = utils.dhcp_service_name()
-            ret |= self.restart_dhcp(service_v4)
-        if self.settings.manage_dhcp_v6:
-            # TODO: Fix hard coded string
-            ret |= self.restart_dhcp("dhcpd6")
+        if self.settings.manage_dhcp_v4 and enums.DHCP.V4 in services:
+            ret |= self.restart_dhcp(services[enums.DHCP.V4])
+        if self.settings.manage_dhcp_v6 and enums.DHCP.V6 in services:
+            ret |= self.restart_dhcp(services[enums.DHCP.V6])
         return ret
 
 

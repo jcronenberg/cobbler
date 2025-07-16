@@ -200,6 +200,7 @@ class Settings:
         self.manage_dhcp = False
         self.manage_dhcp_v6 = False
         self.manage_dhcp_v4 = False
+        self.isc_dhcp_server = "dhcpd"
         self.manage_dns = False
         self.manage_forward_zones: List[str] = []
         self.manage_reverse_zones: List[str] = []

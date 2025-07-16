@@ -332,6 +332,8 @@ chgrp %{apache_group} %{_sysconfdir}/cobbler/settings.yaml
 %config(noreplace) %{_sysconfdir}/cobbler/cheetah_macros
 %config(noreplace) %{_sysconfdir}/cobbler/dhcp.template
 %config(noreplace) %{_sysconfdir}/cobbler/dhcp6.template
+%config(noreplace) %{_sysconfdir}/cobbler/kea-dhcp4.template
+%config(noreplace) %{_sysconfdir}/cobbler/kea-dhcp6.template
 %config(noreplace) %{_sysconfdir}/cobbler/dnsmasq.template
 %config(noreplace) %{_sysconfdir}/cobbler/genders.template
 %config(noreplace) %{_sysconfdir}/cobbler/import_rsync_whitelist

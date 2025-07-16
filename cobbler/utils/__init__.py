@@ -1170,9 +1170,9 @@ def lod_sort_by_key(list_to_sort: List[Any], indexkey: Hashable) -> List[Any]:
     return sorted(list_to_sort, key=lambda k: k[indexkey])
 
 
-def dhcpconf_location(protocol: enums.DHCP, filename: str = "dhcpd.conf") -> str:
+def isc_dhcpconf_location(protocol: enums.DHCP, filename: str = "dhcpd.conf") -> str:
     """
-    This method returns the location of the dhcpd.conf file.
+    This method returns the location of the config file for the configured isc dhcp service.
 
     :param protocol: The DHCP protocol version (v4/v6) that is used.
     :param filename: The filename of the DHCP configuration file.
@@ -1187,18 +1187,25 @@ def dhcpconf_location(protocol: enums.DHCP, filename: str = "dhcpd.conf") -> str
     if protocol == enums.DHCP.V6 and filename == "dhcpd.conf":
         filename = "dhcpd6.conf"
     (dist, version) = os_release()
-    if (
-        (dist in ("redhat", "centos") and version < 6)
-        or (dist == "fedora" and version < 11)
-        or (dist == "suse")
-    ):
-        return os.path.join("/etc", filename)
-    if (dist == "debian" and int(version) < 6) or (
-        dist == "ubuntu" and version < 11.10
-    ):
-        return os.path.join("/etc/dhcp3", filename)
+    data = settings.read_settings_file()
+    if data.get("isc_dhcp_server", "dhcpd") == "kea":
+        if protocol == enums.DHCP.V4:
+            return "/etc/kea/kea-dhcp4.conf"
+        else:
+            return "/etc/kea/kea-dhcp6.conf"
+    else:
+        if (
+                (dist in ("redhat", "centos") and version < 6)
+                or (dist == "fedora" and version < 11)
+                or (dist == "suse")
+        ):
+            return os.path.join("/etc", filename)
+        if (dist == "debian" and int(version) < 6) or (
+                dist == "ubuntu" and version < 11.10
+        ):
+            return os.path.join("/etc/dhcp3", filename)
 
-    return os.path.join("/etc/dhcp/", filename)
+        return os.path.join("/etc/dhcp/", filename)
 
 
 def namedconf_location() -> str:
@@ -1213,22 +1220,31 @@ def namedconf_location() -> str:
     return "/etc/named.conf"
 
 
-def dhcp_service_name() -> str:
+def isc_dhcp_service_name() -> Dict[enums.DHCP, str]:
     """
-    Determine the dhcp service which is different on various distros. This is currently a hardcoded detection.
+    Determine the isc dhcp service which is different on various distros. This is currently a hardcoded detection.
 
-    :return: This will return one of the following names: "dhcp3-server", "isc-dhcp-server", "dhcpd"
+    :return: A dictionary with the service name depending on protocol (v4/v6).
+             If one service manages both protocols only v4 is set.
     """
     (dist, version) = os_release()
-    if dist == "debian" and int(version) < 6:
-        return "dhcp3-server"
-    if dist == "debian" and int(version) >= 6:
-        return "isc-dhcp-server"
-    if dist == "ubuntu" and version < 11.10:
-        return "dhcp3-server"
-    if dist == "ubuntu" and version >= 11.10:
-        return "isc-dhcp-server"
-    return "dhcpd"
+    data = settings.read_settings_file()
+    if data.get("isc_dhcp_server", "dhcpd") == "dhcpd":
+        if dist == "debian" and int(version) < 6:
+            return {enums.DHCP.V4: "dhcp3-server"}
+        if dist == "debian" and int(version) >= 6:
+            return {enums.DHCP.V4: "isc-dhcp-server"}
+        if dist == "ubuntu" and version < 11.10:
+            return {enums.DHCP.V4: "dhcp3-server"}
+        if dist == "ubuntu" and version >= 11.10:
+            return {enums.DHCP.V4: "isc-dhcp-server"}
+        return {enums.DHCP.V4: "dhcpd", enums.DHCP.V6: "dhcpd6"}
+    else:
+        if dist in ("debian", "ubuntu"):
+            return {enums.DHCP.V4: "isc-kea-dhcp4-server", enums.DHCP.V6: "isc-kea-dhcp6-server"}
+        if dist == "suse":
+            return {enums.DHCP.V4: "kea"}
+        return {enums.DHCP.V4: "kea-dhcp4", enums.DHCP.V6: "kea-dhcp6"}
 
 
 def named_service_name() -> str:

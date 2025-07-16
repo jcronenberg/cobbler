@@ -320,6 +320,10 @@ manage_dhcp_v6: false
 # Other dhcp modules ignore this and above settings
 manage_dhcp_v4: false
 
+# What isc dhcp server is to be used
+# Currently the options are either: dhcpd or kea
+isc_dhcp_server: "dhcpd"
+
 # if using Cobbler with manage_dhcp, put the IP address
 # of the Cobbler server here so that PXE booting guests can find it
 # if you do not set this correctly, this will be manifested in TFTP open timeouts.
